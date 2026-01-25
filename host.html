@@ -96,7 +96,10 @@
     <strong>Time Auction – Host</strong><br>
     <span id="phase">Phase: lobby</span>
   </div>
-  <button id="startBtn">Start Round</button>
+  <div>
+    <button id="startBtn">Start Round</button>
+    <button id="restartBtn">Restart Game</button>
+  </div>
 </header>
 
 <div class="container">
@@ -120,12 +123,19 @@
   const playersEl = document.getElementById("players");
   const phaseEl = document.getElementById("phase");
   const startBtn = document.getElementById("startBtn");
+  const restartBtn = document.getElementById("restartBtn");
   const roundInfo = document.getElementById("roundInfo");
   const winnerEl = document.getElementById("winner");
 
   startBtn.onclick = () => {
 	  socket.emit("host_start_round");
 	  winnerEl.textContent = "";
+  };
+
+  restartBtn.onclick = () => {
+    fetch("https://time-auction-server-7ijf.onrender.com/restart").then(() => {
+      winnerEl.textContent = "";
+    });
   };
 
   socket.on("state", state => {
