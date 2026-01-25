@@ -77,6 +77,13 @@
     let phase = "lobby";
     let holding = false;
 
+	// generate persistent player id
+	let playerId = localStorage.getItem("timeAuctionPlayerId");
+	if (!playerId) {
+  		playerId = Math.random().toString(36).substring(2, 10);
+  		localStorage.setItem("timeAuctionPlayerId", playerId);
+	}  
+
     const screen = document.getElementById("screen");
 
     function render(content) {
@@ -139,8 +146,8 @@
 
     // ---- Socket Events ----
 
-    const name = prompt("Enter your name");
-    socket.emit("join", name || "Player");
+    const name = prompt("Enter your name") || "Player";
+    socket.emit("join", { id: playerId, name });
 
     socket.on("countdown_start", ms => {
       phase = "countdown";
