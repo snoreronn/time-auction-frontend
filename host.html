@@ -124,8 +124,8 @@
   const winnerEl = document.getElementById("winner");
 
   startBtn.onclick = () => {
-    fetch("https://time-auction-server-7ijf.onrender.com/start");
-    winnerEl.textContent = "";
+	  socket.emit("host_start_round");
+	  winnerEl.textContent = "";
   };
 
   socket.on("state", state => {
