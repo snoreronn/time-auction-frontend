@@ -52,8 +52,10 @@ socket.emit("join",{id:playerId,name});
 const tapArea = document.getElementById("tapArea");
 let tappedIn = false;
 let holding = false;
+let complete = false;
 
 function startHold() {
+  if (complete) return;
   if(!holding){
     holding = true;
     if(!tappedIn){
@@ -72,6 +74,7 @@ function endHold() {
     tapArea.classList.remove("holding");
     tapArea.textContent = "Bid locked";
     socket.emit("hold_end");
+    complete = true;
   }
 }
 
@@ -80,6 +83,33 @@ tapArea.addEventListener("pointerdown", startHold);
 tapArea.addEventListener("pointerup", endHold);
 tapArea.addEventListener("pointercancel", endHold);
 tapArea.addEventListener("pointerleave", endHold);
+
+// ----------------------------- start experiment
+
+// --- server events ---
+// Reset at start of countdown
+socket.on("countdown_start", ({endsAt})=>{
+  tappedIn = false;
+  holding = false;
+  tapArea.classList.remove("holding");
+  tapArea.textContent = "Tap anywhere to Join / Ready";
+
+  // Countdown display
+  function tick(){
+    const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+    tapArea.textContent = remaining;
+    if(remaining>0) requestAnimationFrame(tick);
+  }
+  tick();
+});
+
+// Auction start → keep tapArea full-screen hold
+socket.on("auction_start", ()=>{
+  tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
+});
+
+// ----------------------------- end experiment
+
 
 // Round result → show winner, then reset for next round
 socket.on("round_result", result=>{

@@ -62,7 +62,8 @@
     <span id="phase">Phase: lobby</span>
   </div>
   <div>
-    <button id="startBtn">Start Round</button>
+    <button id="gameStartBtn">Start Game</button>
+    <button id="roundStartBtn">Start Round</button>
     <button id="restartBtn">Restart Game</button>
   </div>
 </header>
@@ -89,7 +90,8 @@ const playersEl = document.getElementById("players");
 const phaseEl = document.getElementById("phase");
 const roundInfo = document.getElementById("roundInfo");
 const winnerEl = document.getElementById("winner");
-const startBtn = document.getElementById("startBtn");
+const roundStartBtn = document.getElementById("roundStartBtn");
+const gameStartBtn = document.getElementById("gameStartBtn");
 
 let countdownInterval = null;
 let currentPlayers = [];
@@ -113,7 +115,7 @@ function renderPlayers(players){
 
   // Enable Start Round button only if all players tapped in
   const allTapped = players.length>0 && players.every(p=>p.tappedIn);
-  startBtn.disabled = ["countdown","auction"].includes(window.gamePhase);
+  roundStartBtn.disabled = window.gamePhase != "readyToStart";
 }
 
 // Countdown timer
@@ -151,11 +153,15 @@ socket.on("round_result", result=>{
 });
 
 // ----------------- Host Buttons -----------------
-startBtn.onclick = ()=>{
+roundStartBtn
+.onclick = ()=>{
   socket.emit("host_start_round");
   winnerEl.textContent="";
 };
-
+gameStartBtn.onclick = ()=>{
+  socket.emit("host_start_game");
+  winnerEl.textContent="";
+};
 document.getElementById("restartBtn").onclick = ()=>{
   fetch("https://time-auction-server-7ijf.onrender.com/restart")
     .then(()=>{ winnerEl.textContent=""; });
