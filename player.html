@@ -24,12 +24,11 @@
     background:#8b0000;
     cursor:pointer;
     text-align:center;
+    touch-action: none; /* prevent default touch scrolling */
   }
 
-  #tapArea.disabled {
-    background:#4b0000;
-    cursor:default;
-    opacity:0.7;
+  #tapArea.holding {
+    background:#ff4500;
   }
 </style>
 </head>
@@ -47,21 +46,64 @@ if(!playerId){
   localStorage.setItem("timeAuctionPlayerId", playerId);
 }
 
-// --- join game ---
 const name = prompt("Enter your name") || "Player";
 socket.emit("join",{id:playerId,name});
 
-// --- tap to ready ---
 const tapArea = document.getElementById("tapArea");
 let tappedIn = false;
+let holding = false;
 
-tapArea.onclick = () => {
-  if(tappedIn) return;
-  tappedIn = true;
-  tapArea.classList.add("disabled");
-  tapArea.textContent = "Waiting for round…";
-  socket.emit("tap_in");
-};
+function startHold() {
+  if(!holding){
+    holding = true;
+    if(!tappedIn){
+      tappedIn = true;
+      socket.emit("tap_in"); // auto tap-in
+    }
+    tapArea.classList.add("holding");
+    tapArea.textContent = "HOLDING";
+    socket.emit("hold_start");
+  }
+}
+
+function endHold() {
+  if(holding){
+    holding = false;
+    tapArea.classList.remove("holding");
+    tapArea.textContent = "Bid locked";
+    socket.emit("hold_end");
+  }
+}
+
+// --- pointer events for press-and-hold ---
+tapArea.addEventListener("pointerdown", startHold);
+tapArea.addEventListener("pointerup", endHold);
+tapArea.addEventListener("pointercancel", endHold);
+tapArea.addEventListener("pointerleave", endHold);
+
+// Round result → show winner, then reset for next round
+socket.on("round_result", result=>{
+  if(result.tie){
+    tapArea.textContent = "TOKEN LOST";
+  } else if(result.winner){
+    tapArea.textContent = `Winner: ${result.winner}`;
+  } else {
+    tapArea.textContent = "No bids";
+  }
+
+  // reset states after short delay so next round can start
+  setTimeout(()=>{
+    tappedIn = false;
+    holding = false;
+    tapArea.classList.remove("holding");
+    tapArea.textContent = "Waiting for round…";
+  }, 3000);
+});
+</script>
+
+</body>
+</html>
+
 
 // // --- render functions ---
 // function renderLobby(){
@@ -142,6 +184,3 @@ tapArea.onclick = () => {
 
 // // initial screen
 // renderLobby();
-</script>
-</body>
-</html>
