@@ -173,6 +173,7 @@ socket.on("round_result", result=>{
 socket.on("reset_for_round", ()=>{
   tappedIn = false;
   holding = false;
+  complete = false;
   tapArea.classList.remove("holding");
   tapArea.textContent = "Tap anywhere to Join / Ready";
 });
