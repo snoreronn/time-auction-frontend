@@ -62,7 +62,7 @@ let gamePhase = "lobby";
 let remainingMs = 0;
 let auctionStartsAt = null;
 let holdStartTime = null;
-let timeCheckInterval = null;
+let timeExpireTimeout = null;
 
 function getEffectiveRemainingMs() {
   if (gamePhase !== "auction" || !auctionStartsAt) return remainingMs;
@@ -100,6 +100,12 @@ function startHold() {
 
 function endHold() {
   if (holding) {
+    // Clear the time expiry timeout
+    if (timeExpireTimeout) {
+      clearTimeout(timeExpireTimeout);
+      timeExpireTimeout = null;
+    }
+    
     // If you were holding and let go during an auction:
     //  You lock in your bid and can no longer rejoin the auction
     //  Player screen will be disabled for further presses 
@@ -182,22 +188,24 @@ socket.on("auction_start", ({auctionStartsAt: startsAt})=>{
   auctionStartsAt = startsAt;
   tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
   
-  // Start monitoring for time running out during auction
-  if (timeCheckInterval) clearInterval(timeCheckInterval);
-  timeCheckInterval = setInterval(() => {
+  // Set a timeout to auto-release hold when time expires
+  if (timeExpireTimeout) clearTimeout(timeExpireTimeout);
+  
+  // Calculate when time will expire: auctionStartsAt + remainingMs
+  const timeExpireAt = auctionStartsAt + remainingMs;
+  const delayUntilExpire = Math.max(0, timeExpireAt - Date.now());
+  
+  timeExpireTimeout = setTimeout(() => {
     if (holding && gamePhase === "auction") {
-      const effectiveRemaining = getEffectiveRemainingMs();
-      if (effectiveRemaining <= 0) {
-        endHold();
-      }
+      endHold();
     }
-  }, 50); // Check every 50ms
+  }, delayUntilExpire);
 });
 
 
 // Round result → show winner, then reset for next round
 socket.on("round_result", result=>{
-  if (timeCheckInterval) clearInterval(timeCheckInterval);
+  if (timeExpireTimeout) clearTimeout(timeExpireTimeout);
   
   if(result.tie){
     tapArea.textContent = "TOKEN LOST";
