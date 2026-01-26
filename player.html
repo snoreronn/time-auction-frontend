@@ -62,6 +62,7 @@ let gamePhase = "lobby";
 let remainingMs = 0;
 let auctionStartsAt = null;
 let holdStartTime = null;
+let timeCheckInterval = null;
 
 function getEffectiveRemainingMs() {
   if (gamePhase !== "auction" || !auctionStartsAt) return remainingMs;
@@ -180,11 +181,24 @@ socket.on("state", state=>{
 socket.on("auction_start", ({auctionStartsAt: startsAt})=>{
   auctionStartsAt = startsAt;
   tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
+  
+  // Start monitoring for time running out during auction
+  if (timeCheckInterval) clearInterval(timeCheckInterval);
+  timeCheckInterval = setInterval(() => {
+    if (holding && gamePhase === "auction") {
+      const effectiveRemaining = getEffectiveRemainingMs();
+      if (effectiveRemaining <= 0) {
+        endHold();
+      }
+    }
+  }, 50); // Check every 50ms
 });
 
 
 // Round result → show winner, then reset for next round
 socket.on("round_result", result=>{
+  if (timeCheckInterval) clearInterval(timeCheckInterval);
+  
   if(result.tie){
     tapArea.textContent = "TOKEN LOST";
   } else if(result.winner){
@@ -214,84 +228,3 @@ socket.on("time_expired", ()=>{
 
 </body>
 </html>
-
-
-// // --- render functions ---
-// function renderLobby(){
-//   screen.innerHTML=`<div class="hint">Waiting for round to start…</div>`;
-// }
-
-// function renderCountdown(endsAt){
-//   function tick(){
-//     const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
-//     screen.innerHTML=`<div class="countdown">${remaining}</div>`;
-//     if(remaining>0) requestAnimationFrame(tick);
-//   }
-//   tick();
-// }
-
-// function renderAuction(){
-//   screen.innerHTML=`
-//     <div id="holdArea" class="hold">
-//       <div class="big">${holding?"HOLDING":"Hold anywhere to bid"}</div>
-//     </div>
-//   `;
-
-//   const holdArea = document.getElementById("holdArea");
-
-//   // --- persistent hold listeners ---
-//   holdArea.onpointerdown = ()=>{
-//     if(!holding){ 
-//       holding=true;
-//       if(!tappedIn){
-//         tappedIn = true;
-//         socket.emit("tap_in"); // notify host/server
-//       }
-//       holdArea.classList.add("holding");
-//       holdArea.querySelector(".big").textContent="HOLDING";
-//       socket.emit("hold_start");
-//     }
-//   };
-
-//   const release = ()=>{
-//     if(holding){
-//       holding=false;
-//       holdArea.classList.remove("holding");
-//       holdArea.querySelector(".big").textContent="Bid locked";
-//       socket.emit("hold_end");
-//     }
-//   };
-
-//   holdArea.onpointerup = release;
-//   holdArea.onpointercancel = release;
-//   holdArea.onpointerleave = release;
-// }
-
-// function renderRoundEnd(result){
-//   if(result.tie) screen.innerHTML=`<div class="big">Token lost</div>`;
-//   else if(result.winner) screen.innerHTML=`<div class="big">Winner: ${result.winner}</div>`;
-//   else screen.innerHTML=`<div class="big">No bids</div>`;
-// }
-
-// // --- socket events ---
-// socket.on("state", state=>{
-//   phase = state.phase;
-// });
-
-// socket.on("countdown_start", ({endsAt})=>{
-//   phase="countdown";
-//   renderCountdown(endsAt);
-// });
-
-// socket.on("auction_start", ()=>{
-//   phase="auction";
-//   renderAuction();
-// });
-
-// socket.on("round_result", result=>{
-//   phase="roundEnd";
-//   renderRoundEnd(result);
-// });
-
-// // initial screen
-// renderLobby();
