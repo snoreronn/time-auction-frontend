@@ -86,11 +86,13 @@ function endHold() {
     }
     else {
       holding = false;
+      tappedIn = false; // reset tapped in state
       tapArea.textContent = "Tap anywhere to Join / Ready";
       tapArea.classList.remove("holding");
       tapArea.classList.add("readyToStart");
+      socket.emit("tap_out"); // notify server we're no longer tapped in
     }
-    
+
     socket.emit("hold_end", Date.now());
   }
 }
