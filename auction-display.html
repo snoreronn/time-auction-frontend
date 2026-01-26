@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Auction – Auction Display</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  html, body {
+    width: 100%;
+    height: 100%;
+    font-family: system-ui, sans-serif;
+    background: #0b0b0b;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .display-container {
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  .phase-label {
+    font-size: 1.5rem;
+    opacity: 0.7;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .timer {
+    font-size: 10rem;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+
+  .countdown {
+    color: #ff6b6b;
+  }
+
+  .auction-timer {
+    color: #51cf66;
+  }
+
+  .not-started {
+    color: #868e96;
+    font-size: 3rem;
+    opacity: 0.6;
+  }
+
+  .round-info {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 1.2rem;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="round-info" id="roundInfo">Round —</div>
+
+<div class="display-container">
+  <div class="phase-label" id="phaseLabel">Waiting...</div>
+  <div class="timer" id="timer">—</div>
+</div>
+
+<script>
+const socket = io("https://time-auction-server-7ijf.onrender.com");
+
+const timerEl = document.getElementById("timer");
+const phaseLabelEl = document.getElementById("phaseLabel");
+const roundInfoEl = document.getElementById("roundInfo");
+
+let auctionStartsAt = null;
+let countdownInterval = null;
+let animationFrameId = null;
+
+socket.on("state", state => {
+  roundInfoEl.textContent = `Round ${state.round}`;
+});
+
+socket.on("countdown_start", ({ auctionStartsAt: startsAt }) => {
+  auctionStartsAt = startsAt;
+  phaseLabelEl.textContent = "Countdown";
+  timerEl.classList.remove("auction-timer", "not-started");
+  timerEl.classList.add("countdown");
+  
+  clearInterval(countdownInterval);
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((auctionStartsAt - Date.now()) / 1000));
+    timerEl.textContent = remaining;
+    if (remaining > 0) {
+      animationFrameId = requestAnimationFrame(tick);
+    }
+  }
+  tick();
+});
+
+socket.on("auction_start", () => {
+  phaseLabelEl.textContent = "Auction Live";
+  timerEl.classList.remove("countdown", "not-started");
+  timerEl.classList.add("auction-timer");
+  
+  clearInterval(countdownInterval);
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  
+  function tick() {
+    const elapsedMs = Math.max(0, Date.now() - auctionStartsAt);
+    const minutes = Math.floor(elapsedMs / 60000);
+    const seconds = Math.floor((elapsedMs % 60000) / 1000);
+    const centiseconds = Math.floor((elapsedMs % 1000) / 10);
+    
+    const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
+    timerEl.textContent = formatted;
+    animationFrameId = requestAnimationFrame(tick);
+  }
+  tick();
+});
+
+socket.on("round_result", () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  phaseLabelEl.textContent = "Round Over";
+  timerEl.classList.remove("countdown", "auction-timer");
+  timerEl.classList.add("not-started");
+  timerEl.textContent = "—";
+});
+
+// Initial state
+phaseLabelEl.textContent = "Waiting for game...";
+timerEl.classList.add("not-started");
+</script>
+
+</body>
+</html>
