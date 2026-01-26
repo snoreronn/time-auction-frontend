@@ -60,12 +60,32 @@ let holding = false;
 let complete = false;
 let gamePhase = "lobby";
 let remainingMs = 0;
+let auctionStartsAt = null;
+let holdStartTime = null;
+
+function getEffectiveRemainingMs() {
+  if (gamePhase !== "auction" || !auctionStartsAt) return remainingMs;
+  
+  // Calculate how much time has been used since auction started
+  const elapsedSinceAuctionStart = Date.now() - auctionStartsAt;
+  
+  // If we're holding, add the hold duration
+  let timeUsed = elapsedSinceAuctionStart;
+  if (holding && holdStartTime) {
+    // The hold duration is part of the elapsed time, already counted
+    // So we just use the elapsed time
+  }
+  
+  return Math.max(0, remainingMs - timeUsed);
+}
 
 function startHold() {
   if (complete) return;
-  if (remainingMs <= 0) return; // Can't hold if no time remaining
+  const effectiveRemaining = getEffectiveRemainingMs();
+  if (effectiveRemaining <= 0) return; // Can't hold if no time remaining
   if(!holding){
     holding = true;
+    holdStartTime = Date.now();
     if(!tappedIn){
       tappedIn = true;
       socket.emit("tap_in"); // auto tap-in
@@ -157,7 +177,8 @@ socket.on("state", state=>{
 // --------- Game Phases ---------
 
 // Auction start → keep tapArea full-screen hold
-socket.on("auction_start", ()=>{
+socket.on("auction_start", ({auctionStartsAt: startsAt})=>{
+  auctionStartsAt = startsAt;
   tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
 });
 
@@ -171,14 +192,6 @@ socket.on("round_result", result=>{
   } else {
     tapArea.textContent = "No bids";
   }
-
-  // reset states after short delay so next round can start
-  // setTimeout(()=>{
-  //   tappedIn = false;
-  //   holding = false;
-  //   tapArea.classList.remove("holding");
-  //   tapArea.textContent = "Waiting for round…";
-  // }, 3000);
 });
 
 
