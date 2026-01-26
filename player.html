@@ -83,7 +83,6 @@ function endHold() {
       holding = false;
       complete = true; // prevent further interaction after auction
       tapArea.textContent = "Bid locked";
-      socket.emit("hold_end", Date.now());
     }
     else {
       holding = false;
@@ -91,6 +90,8 @@ function endHold() {
       tapArea.classList.remove("holding");
       tapArea.classList.add("readyToStart");
     }
+    
+    socket.emit("hold_end", Date.now());
   }
 }
 
