@@ -114,8 +114,8 @@ function renderPlayers(players){
   });
 
   // Enable Start Round button only if all players tapped in
-  const allTapped = players.length>0 && players.every(p=>p.tappedIn);
-  roundStartBtn.disabled = window.gamePhase != "readyToStart";
+  // const allTapped = players.length>0 && players.every(p=>p.tappedIn);
+  roundStartBtn.disabled = gamePhase != "readyToStart";
 }
 
 // Countdown timer
@@ -128,8 +128,6 @@ function renderCountdown(endsAt){
   }
   tick();
 }
-
-let gamePhase="lobby";
 
 socket.on("state", state=>{
   gamePhase = state.phase;
