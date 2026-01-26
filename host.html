@@ -63,6 +63,7 @@
   </div>
   <div>
     <button id="gameStartBtn">Start Game</button>
+    <button id="roundResetBtn">Reset Round</button>
     <button id="roundStartBtn">Start Round</button>
     <button id="restartBtn">Restart Game</button>
   </div>
@@ -92,6 +93,7 @@ const roundInfo = document.getElementById("roundInfo");
 const winnerEl = document.getElementById("winner");
 const roundStartBtn = document.getElementById("roundStartBtn");
 const gameStartBtn = document.getElementById("gameStartBtn");
+const roundReadyBtn = document.getElementById("roundReadyBtn");
 
 let countdownInterval = null;
 let currentPlayers = [];
@@ -151,13 +153,17 @@ socket.on("round_result", result=>{
 });
 
 // ----------------- Host Buttons -----------------
+gameStartBtn.onclick = ()=>{
+  socket.emit("host_start_game");
+  winnerEl.textContent="";
+};
 roundStartBtn
 .onclick = ()=>{
   socket.emit("host_start_round");
   winnerEl.textContent="";
 };
-gameStartBtn.onclick = ()=>{
-  socket.emit("host_start_game");
+roundResetBtn.onclick = ()=>{
+  socket.emit("host_reset_for_round");
   winnerEl.textContent="";
 };
 document.getElementById("restartBtn").onclick = ()=>{

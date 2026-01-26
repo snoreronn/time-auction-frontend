@@ -69,12 +69,11 @@ function startHold() {
 }
 
 function endHold() {
-  if(holding){
+  if(holding && gamePhase === "auction"){
     holding = false;
     tapArea.classList.remove("holding");
     tapArea.textContent = "Bid locked";
-    socket.emit("hold_end");
-    complete = true;
+    socket.emit("hold_end", Date.now());
   }
 }
 
@@ -88,7 +87,7 @@ tapArea.addEventListener("pointerleave", endHold);
 
 // --- server events ---
 // Reset at start of countdown
-socket.on("countdown_start", ({endsAt})=>{
+socket.on("countdown_start", ({ auctionStartsAt })=>{
   tappedIn = false;
   holding = false;
   tapArea.classList.remove("holding");
@@ -96,19 +95,25 @@ socket.on("countdown_start", ({endsAt})=>{
 
   // Countdown display
   function tick(){
-    const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+    const remaining = Math.max(0, Math.ceil((auctionStartsAt - Date.now())/1000));
     tapArea.textContent = remaining;
-    if(remaining>0) requestAnimationFrame(tick);
+    if (remaining > 0) requestAnimationFrame(tick);
   }
   tick();
 });
+
+socket.on("state", state=>{
+  // You can use this to update UI based on game state if needed
+  gamePhase = state.phase;
+});
+
+
+// --------- Game Phases ---------
 
 // Auction start → keep tapArea full-screen hold
 socket.on("auction_start", ()=>{
   tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
 });
-
-// ----------------------------- end experiment
 
 
 // Round result → show winner, then reset for next round
@@ -122,12 +127,21 @@ socket.on("round_result", result=>{
   }
 
   // reset states after short delay so next round can start
-  setTimeout(()=>{
-    tappedIn = false;
-    holding = false;
-    tapArea.classList.remove("holding");
-    tapArea.textContent = "Waiting for round…";
-  }, 3000);
+  // setTimeout(()=>{
+  //   tappedIn = false;
+  //   holding = false;
+  //   tapArea.classList.remove("holding");
+  //   tapArea.textContent = "Waiting for round…";
+  // }, 3000);
+});
+
+
+// Reset for the round
+socket.on("reset_for_round", ()=>{
+  tappedIn = false;
+  holding = false;
+  tapArea.classList.remove("holding");
+  tapArea.textContent = "Tap anywhere to Join / Ready";
 });
 </script>
 
