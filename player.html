@@ -59,9 +59,11 @@ let tappedIn = false;
 let holding = false;
 let complete = false;
 let gamePhase = "lobby";
+let remainingMs = 0;
 
 function startHold() {
   if (complete) return;
+  if (remainingMs <= 0) return; // Can't hold if no time remaining
   if(!holding){
     holding = true;
     if(!tappedIn){
@@ -137,8 +139,12 @@ socket.on("countdown_start", ({ auctionStartsAt })=>{
 });
 
 socket.on("state", state=>{
-  // You can use this to update UI based on game state if needed
   gamePhase = state.phase;
+  // Find this player in the state and update remaining time
+  const thisPlayer = state.players.find(p => p.id === playerId);
+  if(thisPlayer) {
+    remainingMs = thisPlayer.remainingMs;
+  }
 });
 
 
