@@ -30,6 +30,11 @@
   #tapArea.holding {
     background:#ff4500;
   }
+
+  #tapArea.readyToStart {
+    background:#8b0000;
+  }
+
 </style>
 </head>
 <body>
@@ -62,6 +67,7 @@ function startHold() {
       tappedIn = true;
       socket.emit("tap_in"); // auto tap-in
     }
+    tapArea.classList.remove("readyToStart");
     tapArea.classList.add("holding");
     tapArea.textContent = "HOLDING";
     socket.emit("hold_start");
@@ -69,11 +75,22 @@ function startHold() {
 }
 
 function endHold() {
-  if(holding && gamePhase === "auction"){
-    holding = false;
-    tapArea.classList.remove("holding");
-    tapArea.textContent = "Bid locked";
-    socket.emit("hold_end", Date.now());
+  if (holding) {
+    // If you were holding and let go during an auction:
+    //  You lock in your bid and can no longer rejoin the auction
+    //  Player screen will be disabled for further presses 
+    if (gamePhase === "auction") {
+      holding = false;
+      complete = true; // prevent further interaction after auction
+      tapArea.textContent = "Bid locked";
+      socket.emit("hold_end", Date.now());
+    }
+    else {
+      holding = false;
+      tapArea.textContent = "Tap anywhere to Join / Ready";
+      tapArea.classList.remove("holding");
+      tapArea.classList.add("readyToStart");
+    }
   }
 }
 

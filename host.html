@@ -115,9 +115,8 @@ function renderPlayers(players){
     playersEl.appendChild(li);
   });
 
-  // Enable Start Round button only if all players tapped in
-  // const allTapped = players.length>0 && players.every(p=>p.tappedIn);
-  roundStartBtn.disabled = gamePhase != "readyToStart";
+  // Enable Start Round button only if all players tapped in (playersReady)
+  roundStartBtn.disabled = gamePhase != "playersReady";
 }
 
 // Countdown timer
