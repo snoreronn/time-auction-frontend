@@ -104,10 +104,12 @@ function renderPlayers(players){
   currentPlayers = players; // keep for checking tap-in
   players.forEach(p=>{
     const li = document.createElement("li");
+    const remainingStr = p.remainingMs !== null ? Math.floor(p.remainingMs / 1000) + "s" : "—";
     li.innerHTML = `
       <span>${p.name} <span class="tag">(${p.tokens} tokens)</span></span>
       <span class="tag">
-        ${p.tappedIn ? "Tapped In" : "—"} 
+        ${remainingStr}
+        ${p.tappedIn ? " • Tapped In" : ""} 
         ${p.holding ? " • HOLDING" : ""}
       </span>
     `;
@@ -120,14 +122,19 @@ function renderPlayers(players){
 }
 
 // Countdown timer
-function renderCountdown(endsAt){
+function renderCountdown( auctionStartsAt ){
   clearInterval(countdownInterval);
   function tick(){
-    const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+    const remaining = Math.max(0, Math.ceil((auctionStartsAt-Date.now())/1000));
     roundInfo.textContent = remaining;
     if(remaining>0) requestAnimationFrame(tick);
   }
   tick();
+}
+
+function resetDashboard(){
+  roundInfo.textContent="—";
+  winnerEl.textContent="";
 }
 
 socket.on("state", state=>{
@@ -136,9 +143,9 @@ socket.on("state", state=>{
   renderPlayers(state.players);
 });
 
-socket.on("countdown_start", ({endsAt})=>{
+socket.on("countdown_start", ({ auctionStartsAt })=>{
   winnerEl.textContent="";
-  renderCountdown(endsAt);
+  renderCountdown(auctionStartsAt);
 });
 
 socket.on("auction_start", ()=>{
@@ -162,6 +169,7 @@ roundStartBtn
   winnerEl.textContent="";
 };
 roundResetBtn.onclick = ()=>{
+  resetDashboard();
   socket.emit("host_reset_for_round");
   winnerEl.textContent="";
 };
