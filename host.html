@@ -1,97 +1,58 @@
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Time Auction – Host</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0b0b0b;
-      color: #fff;
-    }
-
-    header {
-      padding: 16px;
-      background: #111;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #222;
-    }
-
-    button {
-      background: #8b0000;
-      color: #fff;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .container {
-      padding: 16px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    .card {
-      background: #151515;
-      border-radius: 12px;
-      padding: 16px;
-    }
-
-    .card h2 {
-      margin-top: 0;
-      font-size: 1.2rem;
-    }
-
-    .players li {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 8px;
-      border-bottom: 1px solid #222;
-      border-radius: 6px;
-    }
-
-    .players li.holding {
-      background: #8b0000;
-    }
-
-    .players li.tapped {
-      background: #1f3d2b;
-    }
-
-    .players li.holding span {
-      font-weight: 700;
-    }
-
-    .tag {
-      font-size: 0.8rem;
-      opacity: 0.7;
-    }
-
-    .countdown {
-      font-size: 3rem;
-      font-weight: 800;
-      text-align: center;
-    }
-
-    .winner {
-      font-size: 2rem;
-      font-weight: 700;
-      text-align: center;
-      color: #ffd700;
-    }
-  </style>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Auction – Host</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #0b0b0b;
+    color: #fff;
+  }
+  header {
+    padding: 16px;
+    background: #111;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #222;
+  }
+  button {
+    background: #8b0000;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .container {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .card {
+    background: #151515;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card h2 { margin-top:0; font-size:1.2rem; }
+  .players li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #222;
+  }
+  .tag { font-size: 0.8rem; opacity:0.7; }
+  .countdown { font-size:3rem; font-weight:800; text-align:center; }
+  .winner { font-size:2rem; font-weight:700; text-align:center; color:#ffd700; }
+  .holding { color: #ff5555; font-weight: 700; }
+</style>
 </head>
 <body>
 
@@ -101,7 +62,6 @@
     <span id="phase">Phase: lobby</span>
   </div>
   <div>
-    <button id="startBtn">Start Round</button>
     <button id="restartBtn">Restart Game</button>
   </div>
 </header>
@@ -122,81 +82,66 @@
 </div>
 
 <script>
-  const socket = io("https://time-auction-server-7ijf.onrender.com");
+const socket = io("https://time-auction-server-7ijf.onrender.com");
 
-  const playersEl = document.getElementById("players");
-  const phaseEl = document.getElementById("phase");
-  const startBtn = document.getElementById("startBtn");
-  const restartBtn = document.getElementById("restartBtn");
-  const roundInfo = document.getElementById("roundInfo");
-  const winnerEl = document.getElementById("winner");
+const playersEl = document.getElementById("players");
+const phaseEl = document.getElementById("phase");
+const roundInfo = document.getElementById("roundInfo");
+const winnerEl = document.getElementById("winner");
 
-  startBtn.onclick = () => {
-	  socket.emit("host_start_round");
-	  winnerEl.textContent = "";
-  };
+let countdownInterval = null;
 
-  restartBtn.onclick = () => {
-    fetch("https://time-auction-server-7ijf.onrender.com/restart").then(() => {
-      winnerEl.textContent = "";
-    });
-  };
-
-  socket.on("state", state => {
-    phaseEl.textContent = `Phase: ${state.phase} | Round ${state.round}`;
-    startBtn.disabled = !(state.phase === "lobby" || state.phase === "roundEnd");
-
-    playersEl.innerHTML = "";
-
-    state.players.forEach(p => {
-      const li = document.createElement("li");
-
-      if (p.holding) li.classList.add("holding");
-      else if (p.tappedIn) li.classList.add("tapped");
-
-      li.innerHTML = `
-        <span>
-          ${p.name}
-          <span class="tag">
-            (${p.tokens} tokens${p.holding ? " • HOLDING" : p.tappedIn ? " • tapped" : ""})
-          </span>
-        </span>
-        <span class="tag">
-          ${p.remainingMs !== null
-            ? Math.floor(p.remainingMs / 1000) + "s"
-            : "—"}
-        </span>
-      `;
-
-      playersEl.appendChild(li);
-    });
+function renderPlayers(players){
+  playersEl.innerHTML="";
+  players.forEach(p=>{
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${p.name} <span class="tag">(${p.tokens} tokens)</span></span>
+      <span class="tag">
+        ${p.tappedIn ? "Tapped In" : "—"} 
+        ${p.holding ? " • HOLDING" : ""}
+      </span>
+    `;
+    if(p.holding) li.classList.add("holding");
+    playersEl.appendChild(li);
   });
+}
 
-  socket.on("countdown_start", ms => {
-    let t = ms / 1000;
-    roundInfo.textContent = t;
-    const i = setInterval(() => {
-      t -= 1;
-      roundInfo.textContent = Math.max(0, t);
-      if (t <= 0) clearInterval(i);
-    }, 1000);
-  });
+function renderCountdown(endsAt){
+  clearInterval(countdownInterval);
+  function tick(){
+    const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+    roundInfo.textContent = remaining;
+    if(remaining>0) requestAnimationFrame(tick);
+  }
+  tick();
+}
 
-  socket.on("auction_start", () => {
-    roundInfo.textContent = "AUCTION LIVE";
-  });
+socket.on("state", state=>{
+  phaseEl.textContent = `Phase: ${state.phase} | Round ${state.round}`;
+  renderPlayers(state.players);
+});
 
-  socket.on("round_result", result => {
-    if (result.tie) {
-      winnerEl.textContent = "TOKEN LOST";
-    } else if (result.winner) {
-      winnerEl.textContent = `Winner: ${result.winner}`;
-    } else {
-      winnerEl.textContent = "No bids";
-    }
-  });
+socket.on("countdown_start", ({endsAt})=>{
+  winnerEl.textContent="";
+  renderCountdown(endsAt);
+});
+
+socket.on("auction_start", ()=>{
+  roundInfo.textContent="AUCTION LIVE";
+});
+
+socket.on("round_result", result=>{
+  if(result.tie) winnerEl.textContent="TOKEN LOST";
+  else if(result.winner) winnerEl.textContent=`Winner: ${result.winner}`;
+  else winnerEl.textContent="No bids";
+});
+
+document.getElementById("restartBtn").onclick = ()=>{
+  fetch("https://time-auction-server-7ijf.onrender.com/restart")
+    .then(()=>{ winnerEl.textContent=""; });
+};
 </script>
 
-
-
-</body></html>
+</body>
+</html>
