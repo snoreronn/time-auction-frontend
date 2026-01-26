@@ -2,143 +2,146 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Time Auction – Player</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <style>
-  * { box-sizing: border-box; user-select: none; }
-  html, body { margin:0; padding:0; height:100%; font-family:system-ui,sans-serif; background:#0b0b0b; color:#fff;}
-  #screen { display:flex; align-items:center; justify-content:center; height:100%; text-align:center; }
-  .big { font-size:2.2rem; font-weight:700; }
-  .hint { font-size:1.2rem; opacity:0.8; }
-  .hold { background:#1e1e1e; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-  .holding { background:#8b0000; }
-  .countdown { font-size:4rem; font-weight:800; }
+  html, body {
+    margin:0; padding:0; height:100%; width:100%;
+    font-family:system-ui,sans-serif;
+    background:#0b0b0b; color:#fff;
+    user-select:none;
+  }
+
+  #tapArea {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100%;
+    font-size:2.5rem;
+    font-weight:700;
+    background:#8b0000;
+    cursor:pointer;
+    text-align:center;
+  }
+
+  #tapArea.disabled {
+    background:#4b0000;
+    cursor:default;
+    opacity:0.7;
+  }
 </style>
 </head>
 <body>
-<div id="screen"></div>
+
+<div id="tapArea">Tap anywhere to Join / Ready</div>
 
 <script>
 const socket = io("https://time-auction-server-7ijf.onrender.com");
-const screen = document.getElementById("screen");
 
+// persistent player ID
 let playerId = localStorage.getItem("timeAuctionPlayerId");
 if(!playerId){
   playerId = Math.random().toString(36).substring(2,10);
   localStorage.setItem("timeAuctionPlayerId", playerId);
 }
 
-const name = prompt("Enter your name")||"Player";
+// --- join game ---
+const name = prompt("Enter your name") || "Player";
 socket.emit("join",{id:playerId,name});
 
-let phase="lobby";
-let holding=false;
-let tappedIn=false;
-let countdownInterval=null;
+// --- tap to ready ---
+const tapArea = document.getElementById("tapArea");
+let tappedIn = false;
 
-// ---------- RENDER ----------
+tapArea.onclick = () => {
+  if(tappedIn) return;
+  tappedIn = true;
+  tapArea.classList.add("disabled");
+  tapArea.textContent = "Waiting for round…";
+  socket.emit("tap_in");
+};
 
-function render(html){screen.innerHTML=html;}
+// // --- render functions ---
+// function renderLobby(){
+//   screen.innerHTML=`<div class="hint">Waiting for round to start…</div>`;
+// }
 
-function renderLobby(){
-  phase="lobby";
-  holding=false;
-  tappedIn=false;
-  render(`<div class="hint">Waiting for next round…</div>`);
-}
+// function renderCountdown(endsAt){
+//   function tick(){
+//     const remaining = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+//     screen.innerHTML=`<div class="countdown">${remaining}</div>`;
+//     if(remaining>0) requestAnimationFrame(tick);
+//   }
+//   tick();
+// }
 
-function renderCountdown(endsAt){
-  phase="countdown";
-  tappedIn=false;
-  holding=false;
+// function renderAuction(){
+//   screen.innerHTML=`
+//     <div id="holdArea" class="hold">
+//       <div class="big">${holding?"HOLDING":"Hold anywhere to bid"}</div>
+//     </div>
+//   `;
 
-  render(`
-    <div id="holdArea" class="hold">
-      <div class="big">Tap anywhere to join</div>
-      <div id="countdown" class="countdown"></div>
-    </div>
-  `);
+//   const holdArea = document.getElementById("holdArea");
 
-  const holdArea = document.getElementById("holdArea");
+//   // --- persistent hold listeners ---
+//   holdArea.onpointerdown = ()=>{
+//     if(!holding){ 
+//       holding=true;
+//       if(!tappedIn){
+//         tappedIn = true;
+//         socket.emit("tap_in"); // notify host/server
+//       }
+//       holdArea.classList.add("holding");
+//       holdArea.querySelector(".big").textContent="HOLDING";
+//       socket.emit("hold_start");
+//     }
+//   };
 
-  // First tap anywhere = tap-in + start holding
-  const startHolding = () => {
-    if(tappedIn) return;
-    tappedIn = true;
-    holding = true;
-    socket.emit("tap_in");
-    socket.emit("hold_start");
-    updateHoldVisual();
-  };
+//   const release = ()=>{
+//     if(holding){
+//       holding=false;
+//       holdArea.classList.remove("holding");
+//       holdArea.querySelector(".big").textContent="Bid locked";
+//       socket.emit("hold_end");
+//     }
+//   };
 
-  const updateHoldVisual = () => {
-    holdArea.classList.toggle("holding", holding);
-    holdArea.querySelector(".big").textContent = holding ? "HOLDING" : "Hold anywhere to bid";
-  };
+//   holdArea.onpointerup = release;
+//   holdArea.onpointercancel = release;
+//   holdArea.onpointerleave = release;
+// }
 
-  holdArea.addEventListener("pointerdown", startHolding);
+// function renderRoundEnd(result){
+//   if(result.tie) screen.innerHTML=`<div class="big">Token lost</div>`;
+//   else if(result.winner) screen.innerHTML=`<div class="big">Winner: ${result.winner}</div>`;
+//   else screen.innerHTML=`<div class="big">No bids</div>`;
+// }
 
-  clearInterval(countdownInterval);
-  countdownInterval = setInterval(()=>{
-    const remaining=Math.max(0,Math.ceil((endsAt-Date.now())/1000));
-    const el=document.getElementById("countdown");
-    if(el) el.textContent=remaining;
-    if(remaining<=0) clearInterval(countdownInterval);
-  },100);
-}
+// // --- socket events ---
+// socket.on("state", state=>{
+//   phase = state.phase;
+// });
 
-function renderAuctionScreen(){
-  if(!tappedIn){
-    render(`<div class="hint">You did not tap in</div>`);
-    return;
-  }
-  phase="auction";
+// socket.on("countdown_start", ({endsAt})=>{
+//   phase="countdown";
+//   renderCountdown(endsAt);
+// });
 
-  render(`
-    <div id="holdArea" class="hold ${holding?'holding':''}">
-      <div class="big">${holding?'HOLDING':'Hold anywhere to bid'}</div>
-    </div>
-  `);
+// socket.on("auction_start", ()=>{
+//   phase="auction";
+//   renderAuction();
+// });
 
-  const holdArea=document.getElementById("holdArea");
+// socket.on("round_result", result=>{
+//   phase="roundEnd";
+//   renderRoundEnd(result);
+// });
 
-  const release=()=>{
-    if(!holding) return;
-    holding=false;
-    updateHoldVisual();
-    socket.emit("hold_end");
-  };
-
-  const updateHoldVisual = () => {
-    holdArea.classList.toggle("holding", holding);
-    holdArea.querySelector(".big").textContent = holding ? "HOLDING" : "Bid locked";
-  };
-
-  // Release on touch up / pointer leave
-  holdArea.addEventListener("pointerup", release);
-  holdArea.addEventListener("pointercancel", release);
-  holdArea.addEventListener("pointerleave", release);
-}
-
-function renderRoundEnd(result){
-  holding=false;
-  tappedIn=false;
-  let text="";
-  if(result.tie) text="Tie — Token lost";
-  else if(result.winner) text=`Winner: ${result.winner}`;
-  else text="No bids";
-  render(`<div class="big">${text}</div>`);
-}
-
-// ---------- SOCKET EVENTS ----------
-
-socket.on("countdown_start", ({endsAt})=>renderCountdown(endsAt));
-socket.on("auction_start", ()=>renderAuctionScreen());
-socket.on("round_result", result=>renderRoundEnd(result));
-socket.on("round_aborted", ()=>render(`<div class="hint">Round aborted — not all tapped in</div>`));
-
-renderLobby();
+// // initial screen
+// renderLobby();
 </script>
 </body>
 </html>

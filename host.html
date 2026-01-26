@@ -62,6 +62,7 @@
     <span id="phase">Phase: lobby</span>
   </div>
   <div>
+    <button id="startBtn">Start Round</button>
     <button id="restartBtn">Restart Game</button>
   </div>
 </header>
@@ -88,11 +89,15 @@ const playersEl = document.getElementById("players");
 const phaseEl = document.getElementById("phase");
 const roundInfo = document.getElementById("roundInfo");
 const winnerEl = document.getElementById("winner");
+const startBtn = document.getElementById("startBtn");
 
 let countdownInterval = null;
+let currentPlayers = [];
 
+// Render player list with holding & tapped in
 function renderPlayers(players){
   playersEl.innerHTML="";
+  currentPlayers = players; // keep for checking tap-in
   players.forEach(p=>{
     const li = document.createElement("li");
     li.innerHTML = `
@@ -105,8 +110,13 @@ function renderPlayers(players){
     if(p.holding) li.classList.add("holding");
     playersEl.appendChild(li);
   });
+
+  // Enable Start Round button only if all players tapped in
+  const allTapped = players.length>0 && players.every(p=>p.tappedIn);
+  startBtn.disabled = ["countdown","auction"].includes(window.gamePhase);
 }
 
+// Countdown timer
 function renderCountdown(endsAt){
   clearInterval(countdownInterval);
   function tick(){
@@ -117,7 +127,10 @@ function renderCountdown(endsAt){
   tick();
 }
 
+let gamePhase="lobby";
+
 socket.on("state", state=>{
+  gamePhase = state.phase;
   phaseEl.textContent = `Phase: ${state.phase} | Round ${state.round}`;
   renderPlayers(state.players);
 });
@@ -136,6 +149,12 @@ socket.on("round_result", result=>{
   else if(result.winner) winnerEl.textContent=`Winner: ${result.winner}`;
   else winnerEl.textContent="No bids";
 });
+
+// ----------------- Host Buttons -----------------
+startBtn.onclick = ()=>{
+  socket.emit("host_start_round");
+  winnerEl.textContent="";
+};
 
 document.getElementById("restartBtn").onclick = ()=>{
   fetch("https://time-auction-server-7ijf.onrender.com/restart")
