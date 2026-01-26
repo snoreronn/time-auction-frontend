@@ -109,15 +109,28 @@ tapArea.addEventListener("pointerleave", endHold);
 // Reset at start of countdown
 socket.on("countdown_start", ({ auctionStartsAt })=>{
   tappedIn = false;
-  holding = false;
-  tapArea.classList.remove("holding");
-  tapArea.textContent = "Tap anywhere to Join / Ready";
+  // Don't reset holding - let players keep their hold through countdown
+  
+  // Show countdown (unless already holding)
+  if (!holding) {
+    tapArea.classList.remove("holding");
+    tapArea.textContent = "Tap anywhere to Join / Ready";
+  }
 
   // Countdown display
   function tick(){
     const remaining = Math.max(0, Math.ceil((auctionStartsAt - Date.now())/1000));
-    tapArea.textContent = remaining;
-    if (remaining > 0) requestAnimationFrame(tick);
+    if (!holding) {
+      tapArea.textContent = remaining;
+    }
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      // Countdown finished, wait for auction_start event
+      if (!holding) {
+        tapArea.textContent = "Starting auction...";
+      }
+    }
   }
   tick();
 });
