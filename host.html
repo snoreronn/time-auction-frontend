@@ -52,6 +52,11 @@
   .countdown { font-size:3rem; font-weight:800; text-align:center; }
   .winner { font-size:2rem; font-weight:700; text-align:center; color:#ffd700; }
   .holding { color: #ff5555; font-weight: 700; }
+
+  .hide-details .player-details {
+    display: none;
+  }
+
 </style>
 </head>
 <body>
@@ -62,6 +67,10 @@
     <span id="phase">Phase: lobby</span>
   </div>
   <div>
+    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="hideDetailsCheckbox">
+      Hide player details
+    </label>
     <button id="gameStartBtn">Start Game</button>
     <button id="roundResetBtn">Reset Round</button>
     <button id="roundStartBtn">Start Round</button>
@@ -105,14 +114,16 @@ function renderPlayers(players){
   players.forEach(p=>{
     const li = document.createElement("li");
     const remainingStr = p.remainingMs !== null ? Math.floor(p.remainingMs / 1000) + "s" : "—";
+
     li.innerHTML = `
-      <span>${p.name} <span class="tag">(${p.tokens} tokens)</span></span>
-      <span class="tag">
-        ${remainingStr}
+      <span>${p.name}</span>
+      <span class="player-details tag">
+        (${p.tokens} tokens) • ${remainingStr}
         ${p.tappedIn ? " • Tapped In" : ""} 
         ${p.holding ? " • HOLDING" : ""}
       </span>
     `;
+
     if(p.holding) li.classList.add("holding");
     playersEl.appendChild(li);
   });
@@ -178,6 +189,15 @@ document.getElementById("restartBtn").onclick = ()=>{
   fetch("https://time-auction-server-7ijf.onrender.com/restart")
     .then(()=>{ winnerEl.textContent=""; });
 };
+
+const hideDetailsCheckbox = document.getElementById("hideDetailsCheckbox");
+
+hideDetailsCheckbox.addEventListener("change", () => {
+  document.body.classList.toggle(
+    "hide-details",
+    hideDetailsCheckbox.checked
+  );
+});
 </script>
 
 </body>

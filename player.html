@@ -186,7 +186,13 @@ socket.on("state", state=>{
 // Auction start → keep tapArea full-screen hold
 socket.on("auction_start", ({auctionStartsAt: startsAt})=>{
   auctionStartsAt = startsAt;
-  tapArea.textContent = holding ? "HOLDING" : "Hold anywhere to bid";
+  
+  if (!holding) {
+    complete = true;
+    tapArea.textContent = "Bid locked";
+  } else {
+    tapArea.textContent = "HOLDING";
+  }
   
   // Set a timeout to auto-release hold when time expires
   if (timeExpireTimeout) clearTimeout(timeExpireTimeout);
@@ -223,7 +229,7 @@ socket.on("reset_for_round", ()=>{
   holding = false;
   complete = false;
   tapArea.classList.remove("holding");
-  tapArea.textContent = "Tap anywhere to Join / Ready";
+  tapArea.textContent = "Hold anywhere to Join / Ready";
 });
 
 socket.on("time_expired", ()=>{
