@@ -112,6 +112,7 @@ let currentPlayers = [];
 function renderPlayers(players){
   playersEl.innerHTML="";
   currentPlayers = players; // keep for checking tap-in
+  
   players.forEach(p=>{
     const li = document.createElement("li");
     const remainingStr = p.remainingMs !== null ? Math.floor(p.remainingMs / 1000) + "s" : "—";
@@ -133,7 +134,14 @@ function renderPlayers(players){
   });
 
   // Enable Start Round button only if all players tapped in (playersReady)
-  roundStartBtn.disabled = gamePhase != "playersReady";
+  const allTappedIn =
+    currentPlayers.length > 0 &&
+    currentPlayers.every(p => p.tappedIn);
+
+  roundStartBtn.disabled = !(
+    gamePhase === "startGame" &&
+    allTappedIn
+  );
 }
 
 // Countdown timer
