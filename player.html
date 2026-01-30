@@ -63,6 +63,7 @@ let remainingMs = 0;
 let auctionStartsAt = null;
 let holdStartTime = null;
 let timeExpireTimeout = null;
+let lockedOut = false;
 
 function getEffectiveRemainingMs() {
   if (gamePhase !== "auction" || !auctionStartsAt) return remainingMs;
@@ -81,16 +82,20 @@ function getEffectiveRemainingMs() {
 }
 
 function startHold() {
-  if (complete) return;
+  if (complete || lockedOut) return;
+
   const effectiveRemaining = getEffectiveRemainingMs();
   if (effectiveRemaining <= 0) return; // Can't hold if no time remaining
+
   if(!holding){
     holding = true;
     holdStartTime = Date.now();
+
     if(!tappedIn){
       tappedIn = true;
       socket.emit("tap_in"); // auto tap-in
     }
+
     tapArea.classList.remove("readyToStart");
     tapArea.classList.add("holding");
     tapArea.textContent = "HOLDING";
@@ -228,6 +233,7 @@ socket.on("reset_for_round", ()=>{
   tappedIn = false;
   holding = false;
   complete = false;
+  lockedOut = false;
   tapArea.classList.remove("holding");
   tapArea.textContent = "Hold anywhere to Join / Ready";
 });
@@ -238,6 +244,16 @@ socket.on("time_expired", ()=>{
   }
   tapArea.textContent = "Time's up!";
 });
+
+socket.on("locked_out", () => {
+  lockedOut = true;
+  complete = true;
+  holding = false;
+
+  tapArea.classList.remove("holding");
+  tapArea.textContent = "Locked out this round";
+});
+
 </script>
 
 </body>

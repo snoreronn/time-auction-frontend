@@ -51,7 +51,8 @@
   .tag { font-size: 0.8rem; opacity:0.7; }
   .countdown { font-size:3rem; font-weight:800; text-align:center; }
   .winner { font-size:2rem; font-weight:700; text-align:center; color:#ffd700; }
-  .holding { color: #ff5555; font-weight: 700; }
+
+  .player-details.holding { color: #ff5555; font-weight: 700; }
 
   .hide-details .player-details {
     display: none;
@@ -124,7 +125,10 @@ function renderPlayers(players){
       </span>
     `;
 
-    if(p.holding) li.classList.add("holding");
+    const details = li.querySelector(".player-details");
+    if (p.holding && details) {
+      details.classList.add("holding");
+    }
     playersEl.appendChild(li);
   });
 
