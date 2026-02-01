@@ -67,6 +67,23 @@ socket.on("connect", () => {
 
 joinGame();
 
+function ensureConnected() {
+  if (socket.disconnected) {
+    socket.connect();
+  } else {
+    joinGame();
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    ensureConnected();
+  }
+});
+
+window.addEventListener("focus", ensureConnected);
+window.addEventListener("online", ensureConnected);
+
 const tapArea = document.getElementById("tapArea");
 let tappedIn = false;
 let holding = false;
