@@ -124,6 +124,29 @@
     font-weight: 700;
     color: #51cf66;
   }
+
+  .host-controls {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .host-controls button {
+    background: #8b0000;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .host-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -141,6 +164,11 @@
   </div>
 </div>
 
+<div class="host-controls">
+  <button id="displayStartRoundBtn">Start Round</button>
+  <button id="displayResetRoundBtn">Reset Round</button>
+</div>
+
 <script>
 const socket = io("https://time-auction-server-7ijf.onrender.com");
 
@@ -150,11 +178,14 @@ const roundInfoEl = document.getElementById("roundInfo");
 const scoreboardEl = document.getElementById("scoreboard");
 const winnerTextEl = document.getElementById("winnerText");
 const scoreboardListEl = document.getElementById("scoreboardList");
+const displayStartRoundBtn = document.getElementById("displayStartRoundBtn");
+const displayResetRoundBtn = document.getElementById("displayResetRoundBtn");
 
 let auctionStartsAt = null;
 let countdownInterval = null;
 let animationFrameId = null;
 let currentPlayers = [];
+let currentPhase = "lobby";
 
 function formatElapsed(elapsedMs) {
   const safeMs = Math.max(0, elapsedMs || 0);
@@ -167,6 +198,14 @@ function formatElapsed(elapsedMs) {
 socket.on("state", state => {
   roundInfoEl.textContent = `Round ${state.round}`;
   currentPlayers = state.players;
+  currentPhase = state.phase;
+
+  displayStartRoundBtn.disabled = !(
+    currentPhase === "startGame" || currentPhase === "playersReady"
+  );
+  displayResetRoundBtn.disabled = !(
+    currentPhase === "startGame" || currentPhase === "roundEnd"
+  );
 });
 
 socket.on("countdown_start", ({ auctionStartsAt: startsAt }) => {
@@ -246,6 +285,14 @@ socket.on("round_result", result => {
 // Initial state
 phaseLabelEl.textContent = "Waiting for game...";
 timerEl.classList.add("not-started");
+
+displayStartRoundBtn.onclick = () => {
+  socket.emit("host_start_round");
+};
+
+displayResetRoundBtn.onclick = () => {
+  socket.emit("host_reset_for_round");
+};
 </script>
 
 </body>
