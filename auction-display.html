@@ -156,6 +156,14 @@ let countdownInterval = null;
 let animationFrameId = null;
 let currentPlayers = [];
 
+function formatElapsed(elapsedMs) {
+  const safeMs = Math.max(0, elapsedMs || 0);
+  const minutes = Math.floor(safeMs / 60000);
+  const seconds = Math.floor((safeMs % 60000) / 1000);
+  const centiseconds = Math.floor((safeMs % 1000) / 10);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
+}
+
 socket.on("state", state => {
   roundInfoEl.textContent = `Round ${state.round}`;
   currentPlayers = state.players;
@@ -190,12 +198,7 @@ socket.on("auction_start", () => {
   
   function tick() {
     const elapsedMs = Math.max(0, Date.now() - auctionStartsAt);
-    const minutes = Math.floor(elapsedMs / 60000);
-    const seconds = Math.floor((elapsedMs % 60000) / 1000);
-    const centiseconds = Math.floor((elapsedMs % 1000) / 10);
-    
-    const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
-    timerEl.textContent = formatted;
+    timerEl.textContent = formatElapsed(elapsedMs);
     animationFrameId = requestAnimationFrame(tick);
   }
   tick();
@@ -206,7 +209,11 @@ socket.on("round_result", result => {
   phaseLabelEl.textContent = "Round Over";
   timerEl.classList.remove("countdown", "auction-timer");
   timerEl.classList.add("not-started");
-  timerEl.textContent = "—";
+  if (auctionStartsAt) {
+    timerEl.textContent = formatElapsed(Date.now() - auctionStartsAt);
+  } else {
+    timerEl.textContent = "—";
+  }
   
   // Show scoreboard
   scoreboardEl.classList.add("show");
