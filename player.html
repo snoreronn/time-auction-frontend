@@ -97,12 +97,19 @@ if(!playerId){
 
 let playerName = localStorage.getItem("timeAuctionPlayerName");
 if (!playerName) {
-  playerName = prompt("Enter your name") || "Player";
-  localStorage.setItem("timeAuctionPlayerName", playerName);
+  playerName = prompt("Enter your name");
+  if (!playerName || !playerName.trim()) {
+    playerName = null;
+  } else {
+    localStorage.setItem("timeAuctionPlayerName", playerName.trim());
+    playerName = playerName.trim();
+  }
 }
 
 function joinGame() {
-  socket.emit("join", { id: playerId, name: playerName });
+  if (playerName) {
+    socket.emit("join", { id: playerId, name: playerName });
+  }
 }
 
 socket.on("connect", () => {
