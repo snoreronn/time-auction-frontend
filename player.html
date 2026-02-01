@@ -51,8 +51,21 @@ if(!playerId){
   localStorage.setItem("timeAuctionPlayerId", playerId);
 }
 
-const name = prompt("Enter your name") || "Player";
-socket.emit("join",{id:playerId,name});
+let playerName = localStorage.getItem("timeAuctionPlayerName");
+if (!playerName) {
+  playerName = prompt("Enter your name") || "Player";
+  localStorage.setItem("timeAuctionPlayerName", playerName);
+}
+
+function joinGame() {
+  socket.emit("join", { id: playerId, name: playerName });
+}
+
+socket.on("connect", () => {
+  joinGame();
+});
+
+joinGame();
 
 const tapArea = document.getElementById("tapArea");
 let tappedIn = false;
