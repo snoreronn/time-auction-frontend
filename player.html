@@ -70,6 +70,7 @@
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
+    display: none;
   }
 
   #disconnectBtn:hover {
@@ -140,7 +141,11 @@ const nameText = document.getElementById("nameText");
 const nameDisplay = document.getElementById("nameDisplay");
 
 // Display current name
-nameText.textContent = playerName;
+if (playerName) {
+  nameText.textContent = playerName;
+} else {
+  nameDisplay.style.display = "none";
+}
 
 // Allow changing name
 nameDisplay.addEventListener("click", () => {
@@ -160,8 +165,11 @@ disconnectBtn.addEventListener("click", () => {
     socket.emit("player_leave");
     localStorage.removeItem("timeAuctionPlayerId");
     localStorage.removeItem("timeAuctionPlayerName");
-    socket.disconnect();
-    window.location.reload();
+    // Wait a moment for the event to be processed before disconnecting
+    setTimeout(() => {
+      socket.disconnect();
+      window.location.reload();
+    }, 100);
   }
 });
 
@@ -172,6 +180,7 @@ let gamePhase = "lobby";
 
 function updateNameDisplayVisibility() {
   nameDisplay.style.display = gamePhase === "lobby" ? "block" : "none";
+  disconnectBtn.style.display = gamePhase === "lobby" ? "block" : "none";
   disconnectBtn.disabled = gamePhase !== "lobby";
 }
 let remainingMs = 0;
