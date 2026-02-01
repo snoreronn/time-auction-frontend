@@ -58,11 +58,30 @@
     color: #ffd700;
   }
 
+  #disconnectBtn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: #666;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #disconnectBtn:hover {
+    background: #888;
+  }
+
 </style>
 </head>
 <body>
 
 <div id="nameDisplay">Player: <span id="nameText"></span> (tap to change)</div>
+<button id="disconnectBtn">Leave Game</button>
 
 <div id="tapArea">Tap anywhere to Join / Ready</div>
 
@@ -127,6 +146,18 @@ nameDisplay.addEventListener("click", () => {
   }
 });
 
+// Disconnect button
+const disconnectBtn = document.getElementById("disconnectBtn");
+disconnectBtn.addEventListener("click", () => {
+  if (confirm("Are you sure you want to leave the game?")) {
+    socket.emit("player_leave");
+    localStorage.removeItem("timeAuctionPlayerId");
+    localStorage.removeItem("timeAuctionPlayerName");
+    socket.disconnect();
+    window.location.reload();
+  }
+});
+
 let tappedIn = false;
 let holding = false;
 let complete = false;
@@ -134,6 +165,7 @@ let gamePhase = "lobby";
 
 function updateNameDisplayVisibility() {
   nameDisplay.style.display = gamePhase === "lobby" ? "block" : "none";
+  disconnectBtn.disabled = gamePhase !== "lobby";
 }
 let remainingMs = 0;
 let auctionStartsAt = null;
