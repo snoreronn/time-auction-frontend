@@ -58,6 +58,40 @@
     display: none;
   }
 
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .settings-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+  }
+
+  .settings-grid input {
+    background: #0f0f0f;
+    color: #fff;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 1rem;
+  }
+
+  .settings-actions {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .settings-status {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+
 </style>
 </head>
 <body>
@@ -92,6 +126,24 @@
     <div id="winner" class="winner"></div>
   </div>
 
+  <div class="card">
+    <h2>Game Settings</h2>
+    <div class="settings-grid">
+      <label>
+        Total rounds
+        <input type="number" id="totalRoundsInput" min="1" step="1" placeholder="Loading…">
+      </label>
+      <label>
+        Minutes per player
+        <input type="number" id="minutesPerPlayerInput" min="1" step="0.5" placeholder="Loading…">
+      </label>
+    </div>
+    <div class="settings-actions">
+      <button id="saveSettingsBtn">Save Settings</button>
+      <span id="settingsStatus" class="settings-status">—</span>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -104,6 +156,13 @@ const winnerEl = document.getElementById("winner");
 const roundStartBtn = document.getElementById("roundStartBtn");
 const gameStartBtn = document.getElementById("gameStartBtn");
 const roundReadyBtn = document.getElementById("roundReadyBtn");
+const totalRoundsInput = document.getElementById("totalRoundsInput");
+const minutesPerPlayerInput = document.getElementById("minutesPerPlayerInput");
+const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+const settingsStatus = document.getElementById("settingsStatus");
+
+let gamePhase = "lobby";
+let currentSettings = null;
 
 let countdownInterval = null;
 let currentPlayers = [];
@@ -139,7 +198,7 @@ function renderPlayers(players){
     currentPlayers.every(p => p.tappedIn);
 
   roundStartBtn.disabled = !(
-    gamePhase === "startGame" &&
+    gamePhase === "playersReady" &&
     allTappedIn
   );
 }
@@ -162,7 +221,21 @@ function resetDashboard(){
 
 socket.on("state", state=>{
   gamePhase = state.phase;
-  phaseEl.textContent = `Phase: ${state.phase} | Round ${state.round}`;
+  const totalRounds = state.totalRounds || state.settings?.totalRounds || "?";
+  phaseEl.textContent = `Phase: ${state.phase} | Round ${state.round}/${totalRounds}`;
+  if (state.settings) {
+    currentSettings = {
+      totalRounds: state.settings.totalRounds,
+      gameDurationMinutes: state.settings.gameDurationMinutes
+    };
+    if (document.activeElement !== totalRoundsInput) {
+      totalRoundsInput.value = state.settings.totalRounds;
+    }
+    if (document.activeElement !== minutesPerPlayerInput) {
+      minutesPerPlayerInput.value = state.settings.gameDurationMinutes;
+    }
+    settingsStatus.textContent = `Saved: ${state.settings.totalRounds} rounds, ${state.settings.gameDurationMinutes} min/player`;
+  }
   renderPlayers(state.players);
 });
 
@@ -200,6 +273,36 @@ document.getElementById("restartBtn").onclick = ()=>{
   resetDashboard();
   fetch("https://time-auction-server-7ijf.onrender.com/restart")
     .then(()=>{ winnerEl.textContent=""; });
+};
+
+saveSettingsBtn.onclick = ()=>{
+  if (!currentSettings) {
+    settingsStatus.textContent = "Settings not loaded yet.";
+    return;
+  }
+  const totalRoundsInputValue = totalRoundsInput.value.trim();
+  const minutesInputValue = minutesPerPlayerInput.value.trim();
+
+  const totalRounds = totalRoundsInputValue === ""
+    ? currentSettings.totalRounds
+    : parseInt(totalRoundsInputValue, 10);
+
+  const gameDurationMinutes = minutesInputValue === ""
+    ? currentSettings.gameDurationMinutes
+    : parseFloat(minutesInputValue);
+
+  if (!Number.isFinite(totalRounds) || totalRounds <= 0) {
+    settingsStatus.textContent = "Enter a valid total rounds value.";
+    return;
+  }
+
+  if (!Number.isFinite(gameDurationMinutes) || gameDurationMinutes <= 0) {
+    settingsStatus.textContent = "Enter a valid minutes value.";
+    return;
+  }
+
+  settingsStatus.textContent = "Saving…";
+  socket.emit("host_update_settings", { totalRounds, gameDurationMinutes });
 };
 
 const hideDetailsCheckbox = document.getElementById("hideDetailsCheckbox");
