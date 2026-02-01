@@ -200,8 +200,12 @@ socket.on("state", state => {
   currentPlayers = state.players;
   currentPhase = state.phase;
 
+  // Check if all players are tapped in
+  const allTappedIn = currentPlayers.length > 0 && currentPlayers.every(p => p.tappedIn);
+
   displayStartRoundBtn.disabled = !(
-    currentPhase === "startGame" || currentPhase === "playersReady"
+    (currentPhase === "startGame" || currentPhase === "playersReady") &&
+    allTappedIn
   );
   displayResetRoundBtn.disabled = !(
     currentPhase === "startGame" || currentPhase === "roundEnd"
