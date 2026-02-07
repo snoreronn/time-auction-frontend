@@ -355,7 +355,7 @@ socket.on("round_result", result=>{
 
 // Reset for the round
 socket.on("reset_for_round", ()=>{
-  tappedIn = false;
+  tappedIn = effective_remaining >= 0 ? false : true;
   holding = false;
   complete = false;
   lockedOut = false;
